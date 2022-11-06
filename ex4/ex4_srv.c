@@ -1,4 +1,4 @@
-// Itay Sova 31326069
+// Itay Sova  (removed)
 #include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>
