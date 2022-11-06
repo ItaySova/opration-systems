@@ -90,18 +90,12 @@ public:
         this->mutex_.unlock();
         sem_post(&this->notEmpty);
     }
-    string remove(){ // todo - continue from here
-        // change to returning char*
-        //cout << "buffer current size: " << this->buffer.size() << "\n";
+    string remove(){ 
         sem_wait(&this->notEmpty);
-        //cout << "remove past wait for not empty\n";
         this->mutex_.lock();
-        //cout << "remove past for mutex\n";
         string news = this->buffer.front();
         this->buffer.pop_front();
-        //cout << "remove inner pop()\n";
         this->mutex_.unlock();
-        //cout << "remove past post mutex\n";
         return news;
     }
 };
@@ -123,18 +117,12 @@ int coEditor_queue_size;
 // add tests if there will be still time
 void from_conf_to_vector(string file_path){
     string line;
-    // full version
-    //ifstream conf_file("conf.txt");
     ifstream conf_file(file_path);
-    // one prod version
-    // two prods version
     int producer_unit_index = 1;
     producer_data p_temp;
     while(getline(conf_file,line)){
-        //cout << "\nline is: " << line << " line length: " << line.length() << "\n";
         // in case the configurations file has cr, lf end of lines instead of just lf
         if(line == "\r" || line == "\n"){
-            cout << "\ncatched the whitespace\n";
             producer_unit_index = 1;
             data_from_conf.push_back(p_temp);
             // after pushing to the vector - set the temp variables to 0 for tests
@@ -191,7 +179,6 @@ void print_vector(vector<producer_data> data){
 void print_vector_corrected(vector<producer_data> data){
     int vector_index = 0;
     int vector_size = data.size();
-    //cout << "type of begin: " << typeid(data.begin()).name() << endl;
     for (;vector_index < vector_size; vector_index++){
         cout << "producer index: "<< data[vector_index].producers_index << "\n";
         cout << "number_of_news: " << data[vector_index].number_of_news << "\n";
@@ -218,7 +205,6 @@ void print_string_vector(deque<string> data){
 
 
 void producer(int prod_index){
-    //cout << "\nthis is a producer's "<< prod_index<<" work\n";
     // each time prod create news the format will be "producer <prod_index> <news_type> <news_index>"
     // take the number of products and index from the struct defined to store each producer's
     // details.
@@ -230,9 +216,6 @@ void producer(int prod_index){
         // create news
         string news;
         int news_type_index = prod_index + i;
-        // note - if needed a single type of news per producer
-        // change switch to switch (producer_id % 3)
-        // real time -  switch (news_type_index % 3)
         switch (news_type_index % 3) {
             case 0:
                 news = "Producer " + to_string(producer_id) + " sports " + to_string(sport_index);
@@ -248,61 +231,46 @@ void producer(int prod_index){
                 break;
         }
         // push news to the appropriate buffer
-        //cout << "\nattempt to push to buffer "<< prod_index << "\n";
         producers_to_dispatcher_queues[prod_index].insert(news);
-        //cout << "pushed succeccfull\n";
     }
     // after finishing all his news products add another "done" string for later functions
-    //cout << "\ndone with the list of producer " << prod_index <<"\n";
     producers_to_dispatcher_queues[prod_index].insert("done");
-    //cout << "\ndone with producer " << prod_index << "\n";
 }
 
 void dispatcher(){
-    //cout << "will be dispatcher function fo thread\n";
     // number of producers is taken from the size of vector storing the producers details
     int num_of_producers = data_from_conf.size();
     bool are_all_producers_done = false;
     // start running on the buffers and classify the news to the different co editors
     while(!are_all_producers_done){
-        //cout << "start going in circle\n";
         int prod_index = 0;
         // each iteration init the num_of_producers_finished and if the num = the num of producers we finish the loop
         int num_of_producers_finished = 0;
         // a loop that go over all the buffers, once each
         for (; prod_index < num_of_producers; prod_index++){
-            //cout << "trying to remove from producer " << prod_index <<  " in inner circle\n";
             string current_news = producers_to_dispatcher_queues[prod_index].remove();
-            //cout << "remove successfully from producer " << prod_index <<  " in inner circle\n";
             // check if the producer is done and if so update the index of done prods and
             // continue to the next iteration of the loop
             if (current_news == "done"){
                 num_of_producers_finished += 1;
-                //cout << "\nproducer "<< prod_index << " is done\n";
-                //cout << "\nnum of producers done: " << num_of_producers_finished;
                 producers_to_dispatcher_queues[prod_index].insert("done");
                 // check if all the producers are done and if so break:
                 if (num_of_producers_finished == num_of_producers){
                     are_all_producers_done = true;
-                    //cout << "\nall producers are done\n";
                     break;
                 }
                 continue;
             }
-            //cout << current_news << "\n";
             size_t is_sports = current_news.find("sports");
             size_t is_news = current_news.find("news");
             size_t is_weather = current_news.find("weather");
             if(is_sports != string::npos){
-                // cout <<"\nSPORTS Inserted to the S dispatcher queue\n";
                 dispatcher_to_sports_coEditor.insert(current_news);
             }
             if (is_news != string::npos){
-                // cout <<"\nNEWS Inserted to the N dispatcher queue\n";
                 dispatcher_to_news_coEditor.insert(current_news);
             }
             if (is_weather != string::npos){
-                // cout <<"\nWEATHER Inserted to the W dispatcher queue\n";
                 dispatcher_to_weather_coEditor.insert(current_news);
             }
         }
@@ -311,7 +279,6 @@ void dispatcher(){
     dispatcher_to_news_coEditor.insert("done");
     dispatcher_to_sports_coEditor.insert("done");
     dispatcher_to_weather_coEditor.insert("done");
-    // cout << "done with dispatcher\n";
 }
 
 void coEditor(int num_of_buffer){
@@ -339,11 +306,9 @@ void coEditor(int num_of_buffer){
             coEditors_to_sm_buffer->insert(last_news_from_dispatch);
         }
     }
-    // cout << "\ndone with co editor\n";
 }
 
 void screenManager(){
-    //cout << "\nscreen managers work:\n";
     int num_of_editors_finished = 0;
     while (num_of_editors_finished < 3){
         // going over the appropriate buffer, removing the first element and if it is not "done"
@@ -368,8 +333,6 @@ int main(int argc, char *argv[]){
     string file_path = argv[1];
     from_conf_to_vector(file_path);
     int num_of_producers = data_from_conf.size();
-    //cout << "number of producers: " << num_of_producers << "\n";
-    //cout << "coEditor queue size: " << coEditor_queue_size << "\n";
     Bounded_Buffer editors_to_screen_manager(coEditor_queue_size);
     coEditors_to_sm_buffer = &editors_to_screen_manager;
     for(int i = 0; i<num_of_producers; i++){
@@ -380,7 +343,6 @@ int main(int argc, char *argv[]){
     }
     // init a vector of threads:
     vector<thread> threads;
-    //cout << "creating threads: \n";
     for (int i = 0; i< num_of_producers; i++){
         // create a thread and push it to the vector
         threads.emplace_back(producer, i);
