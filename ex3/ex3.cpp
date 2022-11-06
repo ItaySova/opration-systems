@@ -1,4 +1,4 @@
-// author: Itay Sova id: 313246209
+// author: Itay Sova id: (removed)
 #include <iostream>
 #include <fstream>
 #include <string>
